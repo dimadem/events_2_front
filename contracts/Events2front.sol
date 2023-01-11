@@ -4,8 +4,8 @@ pragma solidity ^0.8.1;
 
 contract Events2front {
 
-    mapping (address => uint) contributionDate;
     uint public largestContribution;
+    uint public contributionDate;
     address public largestContributor;
 
     event Contribute(address indexed contributorSearch, address contributor, uint contribution);
@@ -14,21 +14,22 @@ contract Events2front {
 
     modifier mainContributor {
 	        require(msg.sender == largestContributor, 
-            "caller is not the largest Contributor" );
+            "You are not the largest Contributor" );
 
-	        require(contributionDate[msg.sender] < block.timestamp, 
-            "please wait" );
+	        require(contributionDate < block.timestamp, 
+            "please wait your time" );
 	        _;
 	    }
 
-    function contribute(uint256 amount) public payable {
-
-        contributionDate[msg.sender] = block.timestamp + 1 minutes;
-        emit Contribute(msg.sender, msg.sender, amount);
+    function contribute() public payable {
+        
+        emit Contribute(msg.sender, msg.sender, msg.value);
 
         if(largestContribution < msg.value)
         {
             largestContributor = msg.sender;
+            largestContribution= msg.value;
+            contributionDate = block.timestamp + 5 minutes;
             emit NewLargestContributor(msg.sender, msg.value);
         }
     }
@@ -38,8 +39,11 @@ contract Events2front {
     }
 
      function withdrawMoneyTo(address payable _to) mainContributor public {
+        largestContribution =0;
+        largestContributor=address(0);
+
          uint balance=getBalance();
         _to.transfer(balance);
-        emit NewLargestContributor(msg.sender, balance);
+        emit WithdrawMoney(msg.sender, balance);
     }
 }
