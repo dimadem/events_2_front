@@ -72,14 +72,14 @@ const Header = () => {
 
   const contribute = async () => {
     event.preventDefault();
-    // try {
+    try {
       const contract = new ethers.Contract(contractAddress, abi, walletProvider.getSigner());
       const options = {value: ethers.utils.parseEther(cntr)}
       await contract.contribute(options);
 
-    // } catch (error) {
-    //   console.error(error);
-    // }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const getLogs = async () => {
