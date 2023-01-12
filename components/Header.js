@@ -8,6 +8,10 @@ const Header = () => {
   const [haveWallet, setHaveWallet] = useState(false);
   const [cntr, setCntr] = useState("");
   const [balance, setBalance] = useState(0);
+  const [logs, setLogs] = useState([]);
+  const [logsOptions, setLogsOptions] = useState(
+    "Contribute(address,address,uint256)"
+  );
 
   // Смена аккаунта
   function handleAccountsChanged(accounts) {
@@ -21,6 +25,14 @@ const Header = () => {
       setCurrentAccount("");
     }
   }
+
+  function setOptions(e) {
+    setLogsOptions(e.target.value);
+  }
+
+  useEffect(() => {
+    console.log(logsOptions);
+  }, [logsOptions]);
 
   useEffect(() => {
     // Проверка наличия кошелька
@@ -69,10 +81,13 @@ const Header = () => {
         walletProvider
       );
       console.log("Contract:", contract);
-      //? запрос баланса
+      // запрос баланса в 16-ричном формате из контракта
       const contractBalance = await contract.getBalance();
+
+      // берем функцию из контракта как из кошелька
       // const contractBalance = await walletProvider.getBalance(contractAddress);
-      //? запрос баланса
+
+      // конвертер 0x00000
       const contractBalanceEthers = ethers.utils.formatEther(contractBalance);
 
       // сохранение баланса в стейт
@@ -84,7 +99,7 @@ const Header = () => {
     }
   };
 
-  // Пополнение баланса
+  // Пополнение баланса payable
   const contribute = async () => {
     event.preventDefault();
     try {
@@ -94,7 +109,7 @@ const Header = () => {
         abi.abi,
         walletProvider.getSigner()
       );
-      //? параметры чего?
+      // заводится значение из {} на данный момент сумма
       const options = { value: ethers.utils.parseEther(cntr) };
       await contract.contribute(options);
     } catch (error) {
@@ -106,20 +121,34 @@ const Header = () => {
   const getLogs = async () => {
     console.log(`Getting events...`);
 
-    // const eventSignature = 'WithdrawMoney(address,uint)';
-    //? что это
-    const eventSignature = "Contribute(address,address,uint256)";
-    const eventTopic = ethers.utils.id(eventSignature); // Get the data hex string
+    // что это
+    // const contribute = "Contribute(address,address,uint256)";
+    // const largestContributor = "NewLargestContributor(address,uint256)";
+    // const withDrawMoney = "WithdrawMoney(address,uint)";
+    // const eventTopic = ethers.utils.id(contribute); // Get the data hex string
+    // хеширует события
+
+    const contribute = ethers.utils.id("Contribute(address,address,uint256)");
+    // const contribute = ethers.utils.id(abi.abi.contribute);
+
+    const withDrawMoney = ethers.utils.id("WithdrawMoney(address,uint)"); //todo abi.encode посмотреть про функцию и попробовать добавить abi;
+    const largestContributor = ethers.utils.id(
+      "NewLargestContributor(address,uint256)"
+    );
 
     const rawLogs = await walletProvider.getLogs({
       address: contractAddress,
-      topics: [eventTopic],
+      topics: [contribute],
       fromBlock: 0,
       toBlock: "latest",
     });
 
     console.log(`Parsing events...`);
+
     const intrfc = new ethers.utils.Interface(abi.abi);
+
+    setLogs(rawLogs);
+    console.log("rawLogs:", rawLogs);
 
     rawLogs.forEach((log) => {
       // console.log(`BEFORE PARSING:`);
@@ -133,43 +162,35 @@ const Header = () => {
     });
   };
 
-  if (!haveWallet) return <p>no Wallet</p>;
+  // if (!haveWallet) return <p>no Wallet</p>;
 
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          position: "relative",
-          justifyContent: "space-between",
-          padding: "16px",
-        }}
-      >
-        <h1>Wallet</h1>
-        {currentAccount ? (
-          <div>
-            <h2>{currentAccount}</h2>
+      <div className="flex flex-row justify-end p-2">
+        <div className="flex flex-col rounded-md bg-opacity-40 w-1/3">
+          <p className="text-xl p-2 text-zinc-700"> 👛 {currentAccount}</p>
+          {currentAccount ? (
             <button
+              className="p-2 text-8xl text-right"
               onClick={() => {
                 setCurrentAccount("");
               }}
             >
-              Log out
+              💸
             </button>
-          </div>
-        ) : (
-          <button onClick={handleMetamaskConnect}>Connect to metamask</button>
-        )}
+          ) : (
+            <button
+              className="p-2 text-8xl text-right"
+              onClick={handleMetamaskConnect}
+            >
+              🤑
+            </button>
+          )}
+        </div>
       </div>
-      <div
-        style={{
-          display: "flex",
-          position: "relative",
-          justifyContent: "space-between",
-          padding: "16px",
-        }}
-      >
-        <h1>Functoins</h1>
+
+      <div className="flex flex-row p-2">
+        <p className="p-2 text-8xl text-right">⚖️</p>
         {currentAccount && (
           <>
             <div>
@@ -189,15 +210,23 @@ const Header = () => {
           </>
         )}
       </div>
-      <div
-        style={{
-          display: "flex",
-          position: "relative",
-          justifyContent: "space-between",
-          padding: "16px",
-        }}
-      >
-        <h1>Logs</h1>
+      {currentAccount && (
+        <div className="">
+          <select onChange={setOptions}>
+            <option value={"Contribute(address,address,uint256)"}>
+              Contributor: {logsOptions}
+            </option>
+            <option value={"NewLargestContributor(address,uint256)"}>
+              High_Contritor: {logsOptions}
+            </option>
+            <option value={"WithdrawMoney(address,uint)"}>
+              Withdraw: {logsOptions}
+            </option>
+          </select>
+        </div>
+      )}
+      <div className="flex flex-row p-2">
+        <p className="p-2 text-8xl text-right">⚒</p>
         {currentAccount && (
           <div>
             <button onClick={getLogs}>Show logs</button>
