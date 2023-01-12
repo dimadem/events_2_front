@@ -110,8 +110,10 @@ const Header = () => {
         walletProvider.getSigner()
       );
       // заводится значение из {} на данный момент сумма
-      const options = { value: ethers.utils.parseEther(cntr) };
-      await contract.contribute(options);
+      if (cntr) {
+        const options = { value: ethers.utils.parseEther(cntr) };
+        await contract.contribute(options);
+      }
     } catch (error) {
       console.error(error);
     }
@@ -128,17 +130,17 @@ const Header = () => {
     // const eventTopic = ethers.utils.id(contribute); // Get the data hex string
     // хеширует события
 
-    const contribute = ethers.utils.id("Contribute(address,address,uint256)");
-    // const contribute = ethers.utils.id(abi.abi.contribute);
-
-    const withDrawMoney = ethers.utils.id("WithdrawMoney(address,uint)"); //todo abi.encode посмотреть про функцию и попробовать добавить abi;
-    const largestContributor = ethers.utils.id(
-      "NewLargestContributor(address,uint256)"
-    );
+    //const contribute = ethers.utils.id("Contribute(address,address,uint256)");
+    //// const contribute = ethers.utils.id(abi.abi.contribute);
+    //const withDrawMoney = ethers.utils.id("WithdrawMoney(address,uint256)"); //todo abi.encode посмотреть про функцию и попробовать добавить abi;
+    //const largestContributor = ethers.utils.id(
+    //  "NewLargestContributor(address,uint256)"
+    //);
 
     const rawLogs = await walletProvider.getLogs({
       address: contractAddress,
-      topics: [contribute],
+      topics: [(ethers.utils.id(logsOptions))],
+      //topics: [ethers.utils.id("WithdrawMoney(address,uint256)")],
       fromBlock: 0,
       toBlock: "latest",
     });
@@ -214,13 +216,13 @@ const Header = () => {
         <div className="">
           <select onChange={setOptions}>
             <option value={"Contribute(address,address,uint256)"}>
-              Contributor: {logsOptions}
+              Contributor
             </option>
             <option value={"NewLargestContributor(address,uint256)"}>
-              High_Contritor: {logsOptions}
+              Highest_Contributor
             </option>
-            <option value={"WithdrawMoney(address,uint)"}>
-              Withdraw: {logsOptions}
+            <option value={"WithdrawMoney(address,uint256)"}>
+              Withdraw
             </option>
           </select>
         </div>
