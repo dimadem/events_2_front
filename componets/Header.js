@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import walletProvider from "./walletProvider";
-
 import abi from "../abi/Events2front.json";
 import { ethers } from "ethers";
 
@@ -66,9 +65,10 @@ const Header = () => {
       // контракт
       const contract = new ethers.Contract(
         contractAddress,
-        abi,
+        abi.abi,
         walletProvider
       );
+      console.log("Contract:", contract);
       //? запрос баланса
       const contractBalance = await contract.getBalance();
       // const contractBalance = await walletProvider.getBalance(contractAddress);
@@ -91,7 +91,7 @@ const Header = () => {
       // контракт
       const contract = new ethers.Contract(
         contractAddress,
-        abi,
+        abi.abi,
         walletProvider.getSigner()
       );
       //? параметры чего?
@@ -119,7 +119,7 @@ const Header = () => {
     });
 
     console.log(`Parsing events...`);
-    const intrfc = new ethers.utils.Interface(abi);
+    const intrfc = new ethers.utils.Interface(abi.abi);
 
     rawLogs.forEach((log) => {
       // console.log(`BEFORE PARSING:`);
