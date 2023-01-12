@@ -28,7 +28,7 @@ contract Events2front {
         if(largestContribution < msg.value)
         {
             largestContributor = msg.sender;
-            largestContribution= msg.value;
+            largestContribution = msg.value;
             contributionDate = block.timestamp + 5 minutes;
             emit NewLargestContributor(msg.sender, msg.value);
         }

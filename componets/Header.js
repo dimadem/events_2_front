@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import walletProvider from "./walletProvider";
-import {abi} from "../abi/Events2front.json"
+
+import abi from "../abi/Events2front.json";
 import { ethers } from "ethers";
 
 const Header = () => {
@@ -9,12 +10,13 @@ const Header = () => {
   const [cntr, setCntr] = useState("");
   const [balance, setBalance] = useState(0);
 
-
+  // Смена аккаунта
   function handleAccountsChanged(accounts) {
-    console.log(accounts);
+    console.log("Accounts", accounts);
     setCurrentAccount(accounts[0]);
   }
 
+  // Смена сети
   function handleChainChanged(chainId) {
     if (chainId !== "0x5") {
       setCurrentAccount("");
@@ -22,20 +24,25 @@ const Header = () => {
   }
 
   useEffect(() => {
-    var hv = (typeof window !== "undefined" && window?.ethereum);
+    // Проверка наличия кошелька
+    var hv = typeof window !== "undefined" && window?.ethereum; //! крутой прием
     setHaveWallet(hv);
 
+    // Подписка на события
     if (hv) {
       window.ethereum.on("accountsChanged", handleAccountsChanged);
       window.ethereum.on("chainChanged", handleChainChanged);
       return () => {
-        window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+        window.ethereum.removeListener(
+          "accountsChanged",
+          handleAccountsChanged
+        );
         window.ethereum.removeListener("chainChanged", handleChainChanged);
       };
     }
   }, []);
 
-
+  // Подключение к метамаску
   const handleMetamaskConnect = async () => {
     try {
       await window.ethereum.request({
@@ -45,55 +52,70 @@ const Header = () => {
 
       const accounts = await walletProvider.send("eth_requestAccounts", []);
       setCurrentAccount(accounts[0]);
-
     } catch (error) {
       console.error(error);
     }
   };
 
-  const contractAddress = '0x7876A574E6FaA409514c30dc2d8DA732254c9af6';
+  // Адресс контракта в сети
+  const contractAddress = "0x7876A574E6FaA409514c30dc2d8DA732254c9af6";
 
+  // Запрос баланса
   const getBalance = async () => {
     try {
-
-      const contract = new ethers.Contract(contractAddress, abi, walletProvider);
+      // контракт
+      const contract = new ethers.Contract(
+        contractAddress,
+        abi,
+        walletProvider
+      );
+      //? запрос баланса
       const contractBalance = await contract.getBalance();
       // const contractBalance = await walletProvider.getBalance(contractAddress);
-      const contractBalanceEthers =ethers.utils.formatEther(contractBalance);
+      //? запрос баланса
+      const contractBalanceEthers = ethers.utils.formatEther(contractBalance);
+
+      // сохранение баланса в стейт
       setBalance(contractBalanceEthers);
 
       console.log("Account balance:", contractBalanceEthers);
-
     } catch (error) {
       console.error(error);
     }
   };
 
-
+  // Пополнение баланса
   const contribute = async () => {
     event.preventDefault();
     try {
-      const contract = new ethers.Contract(contractAddress, abi, walletProvider.getSigner());
-      const options = {value: ethers.utils.parseEther(cntr)}
+      // контракт
+      const contract = new ethers.Contract(
+        contractAddress,
+        abi,
+        walletProvider.getSigner()
+      );
+      //? параметры чего?
+      const options = { value: ethers.utils.parseEther(cntr) };
       await contract.contribute(options);
-
     } catch (error) {
       console.error(error);
     }
   };
 
+  // Логи
   const getLogs = async () => {
     console.log(`Getting events...`);
 
     // const eventSignature = 'WithdrawMoney(address,uint)';
-    const eventSignature = 'Contribute(address,address,uint256)';
+    //? что это
+    const eventSignature = "Contribute(address,address,uint256)";
     const eventTopic = ethers.utils.id(eventSignature); // Get the data hex string
 
     const rawLogs = await walletProvider.getLogs({
       address: contractAddress,
       topics: [eventTopic],
       fromBlock: 0,
-      toBlock: 'latest'
+      toBlock: "latest",
     });
 
     console.log(`Parsing events...`);
@@ -107,13 +129,11 @@ const Header = () => {
       console.log(`AFTER PARSING:`);
       let parsedLog = intrfc.parseLog(log);
       console.log(parsedLog);
-      console.log('************************************************');
-    })
-
+      console.log("************************************************");
+    });
   };
 
-
-  if (!haveWallet) return (<p>no Wallet</p>);
+  if (!haveWallet) return <p>no Wallet</p>;
 
   return (
     <>
@@ -128,9 +148,7 @@ const Header = () => {
         <h1>Wallet</h1>
         {currentAccount ? (
           <div>
-            <h2>
-              {currentAccount}
-            </h2>
+            <h2>{currentAccount}</h2>
             <button
               onClick={() => {
                 setCurrentAccount("");
@@ -156,11 +174,7 @@ const Header = () => {
           <>
             <div>
               <p>{balance}</p>
-              <button
-                onClick={getBalance}
-              >
-                Get balance
-              </button>
+              <button onClick={getBalance}>Get balance</button>
             </div>
             <div>
               <form onSubmit={contribute}>
@@ -171,7 +185,8 @@ const Header = () => {
                 />
                 <button type="submit">Contribute</button>
               </form>
-            </div></>
+            </div>
+          </>
         )}
       </div>
       <div
@@ -185,11 +200,7 @@ const Header = () => {
         <h1>Logs</h1>
         {currentAccount && (
           <div>
-            <button
-              onClick={getLogs}
-            >
-              Show logs
-            </button>
+            <button onClick={getLogs}>Show logs</button>
           </div>
         )}
       </div>

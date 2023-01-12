@@ -1,5 +1,5 @@
 import Head from "next/head";
-import Header from "./componets/Header";
+import Header from "../componets/Header";
 
 export default function Home() {
   return (
@@ -13,12 +13,12 @@ export default function Home() {
       <main>
         <div>
           <p>
-          Wellcome to <b>Events to front</b> project!
+            Wellcome to <b>Events to front</b> project!
           </p>
         </div>
-<div style={{ textAlign: "center" }}>
-    <Header/>
-      </div>
+        <div style={{ textAlign: "center" }}>
+          <Header />
+        </div>
       </main>
     </>
   );
