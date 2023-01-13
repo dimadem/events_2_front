@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import walletProvider from "./walletProvider";
 import abi from "../abi/Events2front.json";
 import { ethers } from "ethers";
@@ -9,9 +9,7 @@ const DataLayout = () => {
   const [cntr, setCntr] = useState("");
   const [balance, setBalance] = useState(0);
   const [logs, setLogs] = useState([]);
-  const [logsOptions, setLogsOptions] = useState(
-    "Contribute(address,address,uint256)"
-  );
+  const [logsOptions, setLogsOptions] = useState("");
 
   // Смена аккаунта
   function handleAccountsChanged(accounts) {
@@ -24,10 +22,6 @@ const DataLayout = () => {
     if (chainId !== "0x5") {
       setCurrentAccount("");
     }
-  }
-
-  function setOptions(e) {
-    setLogsOptions(e.target.value);
   }
 
   useEffect(() => {
@@ -96,7 +90,7 @@ const DataLayout = () => {
   };
 
   // Пополнение баланса payable
-  const contribute = async (event) => {
+  const contribute = async () => {
     event.preventDefault();
     try {
       // контракт
@@ -115,6 +109,9 @@ const DataLayout = () => {
     }
   };
 
+  // создать интерфейс с аби
+  const intrfc = new ethers.utils.Interface(abi.abi);
+
   // Логи
   const getLogs = async () => {
     console.log(`Getting events...`);
@@ -125,30 +122,52 @@ const DataLayout = () => {
       fromBlock: 0,
       toBlock: "latest",
     });
-
-    console.log(`Parsing events...`);
-
-    const intrfc = new ethers.utils.Interface(abi.abi);
-
+    // console.log("rawLogs:", rawLogs);
     setLogs(rawLogs);
-    console.log("rawLogs:", rawLogs);
 
-    rawLogs.forEach((log) => {
-      // console.log(`BEFORE PARSING:`);
-      // console.debug(log);
-      // console.log(`\n`);
+    // console.log(`Parsing events...`);
 
-      console.log(`AFTER PARSING:`);
-      let parsedLog = intrfc.parseLog(log);
-      // parsing log
-      console.log("Address:", parsedLog.args[0]);
-      console.log("BigNumber Contributor:", parsedLog.args[2]?._hex);
-      console.log("BigNumber Highest&WithdrawMoney:", parsedLog.args[1]?._hex);
-      console.log("Header:", parsedLog.name);
-      // console.log(parsedLog);
-      console.log("************************************************");
-    });
+    // rawLogs.forEach((log) => {
+    //   // console.log(`BEFORE PARSING:`);
+    //   // console.debug(log);
+    //   // console.log(`\n`);
+
+    //   console.log(`AFTER PARSING:`);
+    //   const parsedLog = intrfc.parseLog(log);
+    //   // parsing log
+    //   console.log("Address:", parsedLog.args[0]);
+    //   if (logsOptions == "Contribute(address,address,uint256)") {
+    //     console.log("BigNumber:", ethers.utils.formatEther(parsedLog?.args[2]));
+    //   } else {
+    //     console.log("BigNumber:", ethers.utils.formatEther(parsedLog?.args[1]));
+    //   }
+    //   console.log("Header:", parsedLog.name);
+    //   console.log("************************************************");
+    // });
   };
+
+  // Таблица Логов
+  const TableData = () =>
+    logs.map((log, id) => {
+      const parsedLog = intrfc.parseLog(log);
+      console.log("parsedLog:", parsedLog.args);
+      return (
+        <tr key={id}>
+          <td key={id + 1} class="border border-slate-300">
+            {parsedLog.args[0]}
+          </td>
+          {logsOptions == "Contribute(address,address,uint256)" ? (
+            <td key={id + 2} class="border border-slate-300">
+              {ethers.utils.formatEther(parsedLog.args[2])}
+            </td>
+          ) : (
+            <td key={id + 3} class="border border-slate-300">
+              {ethers.utils.formatEther(parsedLog.args[1])}
+            </td>
+          )}
+        </tr>
+      );
+    });
 
   // if (!haveWallet) return <p>no Wallet</p>;
 
@@ -177,6 +196,7 @@ const DataLayout = () => {
           )}
         </div>
       </div>
+
       {/* get balance */}
       <div className="flex flex-col items-end p-2">
         <div className="flex flex-row">
@@ -197,6 +217,7 @@ const DataLayout = () => {
             </>
           )}
         </div>
+
         {/* contribute to the contract */}
         <div className="flex flex-row">
           {currentAccount ? (
@@ -232,8 +253,9 @@ const DataLayout = () => {
             <div className="px-4">
               <select
                 className="text-zinc-200 text-lg bg-transparent p-4 border-dashed border-zinc-700"
-                onChange={setOptions}
+                onChange={(e) => setLogsOptions(e.target.value)}
               >
+                <option>-</option>
                 <option value={"Contribute(address,address,uint256)"}>
                   Contributor
                 </option>
@@ -245,7 +267,6 @@ const DataLayout = () => {
                 </option>
               </select>
             </div>
-
             <button className="p-2 text-5xl text-right" onClick={getLogs}>
               ⚒
             </button>
@@ -257,32 +278,19 @@ const DataLayout = () => {
 
       {/* table */}
       <div className="flex flex-col pt-8 p-4">
-        <table className="table-fixed border-collapse border border-slate-400">
-          <thead className="p-2 text-3xl text-zinc-200">
-            <tr>
-              <th className="border border-slate-800">address</th>
-              <th className="border border-slate-800">money</th>
-              <th className="border border-slate-800">Year</th>
-            </tr>
-          </thead>
-          <tbody>
-            {/* <tr>
-              {rawLogs.map((log) => {
-                <td>{log}</td>;
-              })}
-            </tr> */}
-            <tr>
-              <td>Witchy Woman</td>
-              <td>The Eagles</td>
-              <td>1972</td>
-            </tr>
-            <tr>
-              <td>Shining Star</td>
-              <td>Earth, Wind, and Fire</td>
-              <td>1975</td>
-            </tr>
-          </tbody>
-        </table>
+        {currentAccount ? (
+          <table class="table-fixed border-collapse border border-slate-400">
+            <thead className="">
+              <tr className="my-3 text-xl">
+                <th class="border border-slate-300">address</th>
+                <th class="border border-slate-300">amount</th>
+              </tr>
+            </thead>
+            <tbody className="text-center text-lg">
+              <TableData />
+            </tbody>
+          </table>
+        ) : null}
       </div>
     </>
   );
