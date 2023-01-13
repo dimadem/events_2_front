@@ -8,6 +8,7 @@ const Header = () => {
   const [haveWallet, setHaveWallet] = useState(false);
   const [cntr, setCntr] = useState("");
   const [balance, setBalance] = useState(0);
+  const [txConfirmed, setTxConfirmed] = useState("");
   const [logs, setLogs] = useState([]);
   const [logsOptions, setLogsOptions] = useState(
     "Contribute(address,address,uint256)"
@@ -41,9 +42,25 @@ const Header = () => {
 
     // Подписка на события
     if (hv) {
+
+      //здесь слушаются события
+      const filter = {
+        address: contractAddress,
+        topics: [
+          ethers.utils.id("WithdrawMoney(address,uint256)")
+        ],
+        fromBlock: 0,
+        toBlock: "latest"
+      }
+      walletProvider.on(filter, (log, event) => {
+        console.log('new Withdraw event!', log)
+      })
+
+
       window.ethereum.on("accountsChanged", handleAccountsChanged);
       window.ethereum.on("chainChanged", handleChainChanged);
       return () => {
+        walletProvider.removeAllListeners();//здесь сбрасываюется листенер
         window.ethereum.removeListener(
           "accountsChanged",
           handleAccountsChanged
@@ -73,6 +90,7 @@ const Header = () => {
 
   // Запрос баланса
   const getBalance = async () => {
+
     try {
       // контракт
       const contract = new ethers.Contract(
@@ -112,7 +130,17 @@ const Header = () => {
       // заводится значение из {} на данный момент сумма
       if (cntr) {
         const options = { value: ethers.utils.parseEther(cntr) };
-        await contract.contribute(options);
+        var tx = await contract.contribute(options);
+
+        // подтверждение транзакции
+        // способ1
+        //const txc = await walletProvider.waitForTransaction(tx.hash)
+        //setTxConfirmed(txc.blockNumber);
+        // способ 2
+        walletProvider.once(tx.hash, (txc) => {
+          setTxConfirmed("tx completed! "+ txc.blockNumber)
+        })
+
       }
     } catch (error) {
       console.error(error);
@@ -137,17 +165,33 @@ const Header = () => {
     //  "NewLargestContributor(address,uint256)"
     //);
 
+    // let events = await cryptopunkContract.queryFilter('PunkTransfer', currentBlock - 10000, currentBlock);
+
+    // const transferEvent = new ethers.utils.Interface([
+    //   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
+    // ]);
+
+    const intrfc = new ethers.utils.Interface(abi.abi);
+
     const rawLogs = await walletProvider.getLogs({
       address: contractAddress,
-      topics: [(ethers.utils.id(logsOptions))],
+      // topics: [(ethers.utils.id(logsOptions))],
       //topics: [ethers.utils.id("WithdrawMoney(address,uint256)")],
+
+      //так можно фильтровать несколько событий
+      topics: [[
+        // ethers.utils.id("Contribute(address,address,uint256)"),
+        // ethers.utils.id("NewLargestContributor(address,uint256)"),
+        // ethers.utils.id("WithdrawMoney(address,uint256)"),
+        intrfc.getEventTopic("Contribute"),
+        intrfc.getEventTopic("NewLargestContributor"),
+        intrfc.getEventTopic("NewLargestContributor")
+      ]],
       fromBlock: 0,
       toBlock: "latest",
     });
 
     console.log(`Parsing events...`);
-
-    const intrfc = new ethers.utils.Interface(abi.abi);
 
     setLogs(rawLogs);
     console.log("rawLogs:", rawLogs);
@@ -183,12 +227,7 @@ const Header = () => {
     //  "NewLargestContributor(address,uint256)"
     //);
 
-    // let events = await cryptopunkContract.queryFilter('PunkTransfer', currentBlock - 10000, currentBlock);
-
-    // const transferEvent = new ethers.utils.Interface([
-    //   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
-    // ]);
-    var indexed =ethers.utils.hexZeroPad("0x6c93589a905Ec991a4987b727D32191feD1C60a3", 32);
+    var indexed = ethers.utils.hexZeroPad("0x6c93589a905Ec991a4987b727D32191feD1C60a3", 32);
 
     const rawLogs = await walletProvider.getLogs({
       address: contractAddress,
@@ -264,6 +303,7 @@ const Header = () => {
               <button onClick={getBalance}>Get balance</button>
             </div>
             <div>
+              <p>Confirmation: {txConfirmed}</p>
               <form onSubmit={contribute}>
                 <input
                   onChange={(e) => setCntr(e.target.value)}
