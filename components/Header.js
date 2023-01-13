@@ -164,6 +164,60 @@ const Header = () => {
     });
   };
 
+
+  // Логи
+  const searchLogs = async () => {
+    console.log(`Getting events...`);
+
+    // что это
+    // const contribute = "Contribute(address,address,uint256)";
+    // const largestContributor = "NewLargestContributor(address,uint256)";
+    // const withDrawMoney = "WithdrawMoney(address,uint)";
+    // const eventTopic = ethers.utils.id(contribute); // Get the data hex string
+    // хеширует события
+
+    //const contribute = ethers.utils.id("Contribute(address,address,uint256)");
+    //// const contribute = ethers.utils.id(abi.abi.contribute);
+    //const withDrawMoney = ethers.utils.id("WithdrawMoney(address,uint256)"); //todo abi.encode посмотреть про функцию и попробовать добавить abi;
+    //const largestContributor = ethers.utils.id(
+    //  "NewLargestContributor(address,uint256)"
+    //);
+
+    // let events = await cryptopunkContract.queryFilter('PunkTransfer', currentBlock - 10000, currentBlock);
+
+    // const transferEvent = new ethers.utils.Interface([
+    //   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
+    // ]);
+    var indexed =ethers.utils.hexZeroPad("0x6c93589a905Ec991a4987b727D32191feD1C60a3", 32);
+
+    const rawLogs = await walletProvider.getLogs({
+      address: contractAddress,
+      topics: [ethers.utils.id("Contribute(address,address,uint256)"), indexed],
+      fromBlock: 0,
+      toBlock: "latest",
+    });
+
+    console.log(`Parsing events...`);
+
+    const intrfc = new ethers.utils.Interface(abi.abi);
+
+    setLogs(rawLogs);
+    console.log("rawLogs:", rawLogs);
+
+    rawLogs.forEach((log) => {
+      // console.log(`BEFORE PARSING:`);
+      // console.debug(log);
+      // console.log(`\n`);
+
+      console.log(`AFTER PARSING:`);
+      let parsedLog = intrfc.parseLog(log);
+      console.log(parsedLog);
+      console.log("************************************************");
+    });
+  };
+
+
+
   // if (!haveWallet) return <p>no Wallet</p>;
 
   return (
@@ -190,6 +244,16 @@ const Header = () => {
           )}
         </div>
       </div>
+
+
+      {currentAccount && (
+        <div className="flex flex-row p-2">
+          <p className="p-2 text-8xl text-right">⚒</p>
+          <div>
+            <button onClick={searchLogs}>Search logs</button>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-row p-2">
         <p className="p-2 text-8xl text-right">⚖️</p>
