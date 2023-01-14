@@ -8,8 +8,11 @@ const DataLayout = () => {
   const [haveWallet, setHaveWallet] = useState(false);
   const [cntr, setCntr] = useState("");
   const [balance, setBalance] = useState(0);
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs] = useState([[], null]);
   const [logsOptions, setLogsOptions] = useState("");
+
+  // создать интерфейс с аби
+  const intrfc = new ethers.utils.Interface(abi.abi);
 
   // Смена аккаунта
   function handleAccountsChanged(accounts) {
@@ -31,9 +34,23 @@ const DataLayout = () => {
 
     // Подписка на события
     if (hv) {
+
+      //здесь слушается WithdrawMoney
+      const filter = {
+        address: contractAddress,
+        topics: [intrfc.getEventTopic("WithdrawMoney")],
+        fromBlock: 0,
+        toBlock: "latest"
+      }
+      walletProvider.on(filter, (log, event) => {
+        console.log('new Withdraw event!', log)//todo сделать алерт, учесть множественный
+      })
+
       window.ethereum.on("accountsChanged", handleAccountsChanged);
       window.ethereum.on("chainChanged", handleChainChanged);
       return () => {
+        walletProvider.removeAllListeners();//здесь сбрасываюется листенер
+
         window.ethereum.removeListener(
           "accountsChanged",
           handleAccountsChanged
@@ -103,27 +120,38 @@ const DataLayout = () => {
       if (cntr) {
         const options = { value: ethers.utils.parseEther(cntr) };
         await contract.contribute(options);
+
+        // подтверждение транзакции
+        //const txc = await walletProvider.waitForTransaction(tx.hash)
+        walletProvider.once(tx.hash, (txc) => {
+          console.log("tx completed! ", txc.blockNumber);//TODO подтверждение транзакции contribute вывести
+        })
       }
     } catch (error) {
       console.error(error);
     }
   };
 
-  // создать интерфейс с аби
-  const intrfc = new ethers.utils.Interface(abi.abi);
-
   // Логи
   const getLogs = async () => {
     console.log(`Getting events...`);
 
+    let topic = [intrfc.getEventTopic(logsOptions)];
+
+    //поиск по индексированному значению
+    const searchField = "0x6c93589a905Ec991a4987b727D32191feD1C60a3";//TODO сделать поиск по индексированным
+    if (logsOptions == "Contribute" && searchField)
+      topic[1] = ethers.utils.hexZeroPad(searchField, 32);
+
     const rawLogs = await walletProvider.getLogs({
       address: contractAddress,
-      topics: [ethers.utils.id(logsOptions)],
+      //topics: [ethers.utils.id(logsOptions)],//Contribute(address,address,uint256)
+      topics: topic,
       fromBlock: 0,
       toBlock: "latest",
     });
     // console.log("rawLogs:", rawLogs);
-    setLogs(rawLogs);
+    setLogs([rawLogs, logsOptions]);
 
     // console.log(`Parsing events...`);
 
@@ -148,7 +176,7 @@ const DataLayout = () => {
 
   // Таблица Логов
   const TableData = () =>
-    logs.map((log, id) => {
+    logs[0].map((log, id) => {
       const parsedLog = intrfc.parseLog(log);
       console.log("parsedLog:", parsedLog.args);
       return (
@@ -156,7 +184,7 @@ const DataLayout = () => {
           <td key={id + 1} class="border border-slate-300">
             {parsedLog.args[0]}
           </td>
-          {logsOptions == "Contribute(address,address,uint256)" ? (
+          {logs[1] == "Contribute" ? (
             <td key={id + 2} class="border border-slate-300">
               {ethers.utils.formatEther(parsedLog.args[2])}
             </td>
@@ -256,13 +284,13 @@ const DataLayout = () => {
                 onChange={(e) => setLogsOptions(e.target.value)}
               >
                 <option>-</option>
-                <option value={"Contribute(address,address,uint256)"}>
+                <option value={"Contribute"}>
                   Contributor
                 </option>
-                <option value={"NewLargestContributor(address,uint256)"}>
+                <option value={"NewLargestContributor"}>
                   Highest Contributor
                 </option>
-                <option value={"WithdrawMoney(address,uint256)"}>
+                <option value={"WithdrawMoney"}>
                   Withdraw
                 </option>
               </select>
