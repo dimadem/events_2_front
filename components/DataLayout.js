@@ -8,7 +8,7 @@ const DataLayout = () => {
   const [haveWallet, setHaveWallet] = useState(false);
   const [cntr, setCntr] = useState("");
   const [balance, setBalance] = useState(0);
-  const [logs, setLogs] = useState([]);
+  const [logs, setLogs] = useState([[], null]);
   const [logsOptions, setLogsOptions] = useState("");
 
   // Смена аккаунта
@@ -103,6 +103,12 @@ const DataLayout = () => {
       if (cntr) {
         const options = { value: ethers.utils.parseEther(cntr) };
         await contract.contribute(options);
+
+         // подтверждение транзакции
+        //const txc = await walletProvider.waitForTransaction(tx.hash)
+        walletProvider.once(tx.hash, (txc) => {
+          console.log("tx completed! ", txc.blockNumber);
+        })
       }
     } catch (error) {
       console.error(error);
@@ -123,7 +129,7 @@ const DataLayout = () => {
       toBlock: "latest",
     });
     // console.log("rawLogs:", rawLogs);
-    setLogs(rawLogs);
+    setLogs([rawLogs, logsOptions]);
 
     // console.log(`Parsing events...`);
 
@@ -148,7 +154,7 @@ const DataLayout = () => {
 
   // Таблица Логов
   const TableData = () =>
-    logs.map((log, id) => {
+    logs[0].map((log, id) => {
       const parsedLog = intrfc.parseLog(log);
       console.log("parsedLog:", parsedLog.args);
       return (
@@ -156,7 +162,7 @@ const DataLayout = () => {
           <td key={id + 1} class="border border-slate-300">
             {parsedLog.args[0]}
           </td>
-          {logsOptions == "Contribute(address,address,uint256)" ? (
+          {logs[1] == "Contribute(address,address,uint256)" ? (
             <td key={id + 2} class="border border-slate-300">
               {ethers.utils.formatEther(parsedLog.args[2])}
             </td>
