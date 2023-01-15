@@ -193,20 +193,50 @@ const DataLayout = () => {
     if (!logsOptions)//если не выбран элемент списка
       return;
 
-    let topic = [intrfc.getEventTopic(logsOptions)];
+    // let topic = [intrfc.getEventTopic(logsOptions)];
 
-    //поиск по индексированному значению
-    if (logsOptions == "Contribute" && searchAddress)
-      topic[1] = ethers.utils.hexZeroPad(searchAddress, 32);
+    // //поиск по индексированному значению
+    // if (logsOptions == "Contribute" && searchAddress)
+    //   topic[1] = ethers.utils.hexZeroPad(searchAddress, 32);
 
-    const rawLogs = await provider.getLogs({
-      address: contractAddress,
-      //topics: [ethers.utils.id(logsOptions)],//Contribute(address,address,uint256)
-      topics: topic,
-      fromBlock: 0,
-      toBlock: "latest",
-    });
-    // console.log("rawLogs:", rawLogs);
+    // const rawLogs = await provider.getLogs({
+    //   address: contractAddress,
+    //   //topics: [ethers.utils.id(logsOptions)],//Contribute(address,address,uint256)
+    //   topics: topic,
+    //   fromBlock: 0,
+    //   toBlock: "latest",
+    // });
+
+
+    const contract = new ethers.Contract(
+      contractAddress,
+      abi.abi,
+      provider.getSigner()
+    );
+
+    let eventFilter;
+
+    switch (logsOptions) {
+      case 'Contribute':
+        eventFilter = contract.filters.Contribute();
+        //поиск по индексированному значению
+        if (searchAddress)
+          eventFilter = contract.filters.Contribute(searchAddress);
+        break;
+      case 'NewLargestContributor':
+        eventFilter = contract.filters.NewLargestContributor();
+        break;
+      case 'WithdrawMoney':  // if (x === 'value2')
+        eventFilter = contract.filters.WithdrawMoney();
+        break;
+
+      default:
+        return;
+    }
+
+    const rawLogs = await contract.queryFilter(eventFilter, 0, "latest");
+
+    //console.log("rawLogs:", rawLogs);
     setLogs([rawLogs, logsOptions]);
 
     // console.log(`Parsing events...`);
@@ -251,7 +281,7 @@ const DataLayout = () => {
           )}
         </tr>
       );
-    });
+    }).reverse();
 
   // if (!haveWallet) return <p>no Wallet</p>;
 
