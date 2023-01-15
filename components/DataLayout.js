@@ -28,7 +28,6 @@ const DataLayout = () => {
     }
   }
 
-
   useEffect(() => {
     // Проверка наличия кошелька
     var hv = typeof window !== "undefined" && window?.ethereum; //! крутой прием
@@ -129,7 +128,7 @@ const DataLayout = () => {
         // подтверждение транзакции
         //const txc = await walletProvider.waitForTransaction(tx.hash)
         provider.once(tx.hash, (txc) => {
-          setMessages("tx completed! " + txc.blockNumber);
+          setMessages("contribute completed! blockNumber:" + txc.blockNumber);
         })
 
         setCntr("");
@@ -150,13 +149,20 @@ const DataLayout = () => {
         provider.getSigner()
       );
 
-      // const estimation = await contract.callStatic.withdrawMoneyTo(currentAccount);
+      //const estimation = await contract.estimateGas.withdrawMoneyTo("0x0000000000000000000000000000000000000000");
+      const estimation = await contract.callStatic.withdrawMoneyTo("0x0000000000000000000000000000000000000000");
 
-      // setMessages("Check transaction " + estimation);
+      let gasPrice = await provider.getGasPrice()
+      let gasLimit = await contract.estimateGas.withdrawMoneyTo("0x0000000000000000000000000000000000000000");
+
+
+      let transactionFee = gasPrice * gasLimit;
+
+      setMessages("Gas amount: " + transactionFee);
+      console.log("Check transaction:", transactionFee);
 
     } catch (error) {
-      console.error("hhhh", error);
-      //setMessages("OK Gas estimation "+ estimation);
+      console.error(error);
     }
   };
 
@@ -169,10 +175,10 @@ const DataLayout = () => {
         abi.abi,
         provider.getSigner()
       );
-      await contract.withdrawMoneyTo(provider.getSigner());
+      await contract.withdrawMoneyTo(currentAccount);
 
       provider.once(tx.hash, (txc) => {
-        setMessages("tx completed! " + txc.blockNumber);
+        setMessages("withdraw completed! blockNumber:" + txc.blockNumber);
       })
 
     } catch (error) {
@@ -228,7 +234,7 @@ const DataLayout = () => {
   const TableData = () =>
     logs[0].map((log, id) => {
       const parsedLog = intrfc.parseLog(log);
-      console.log("parsedLog:", parsedLog.args);
+      //console.log("parsedLog:", parsedLog.args);
       return (
         <tr key={id}>
           <td key={id + 1} className="border border-slate-300">
@@ -337,7 +343,7 @@ const DataLayout = () => {
                 className="p-2 text-2xl"
                 onClick={tryWithdraw}
               >
-                ✔ Check transaction
+                ✔ Check gas amount
               </button>
               <button
                 className="p-2 text-4xl"
@@ -387,8 +393,6 @@ const DataLayout = () => {
             <p className="p-2 text-4xl">⚒ Get logs</p>
           )}
         </div>
-
-
       </div>
 
       {/* table */}
