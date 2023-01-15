@@ -149,20 +149,36 @@ const DataLayout = () => {
         provider.getSigner()
       );
 
-      //const estimation = await contract.estimateGas.withdrawMoneyTo("0x0000000000000000000000000000000000000000");
-      const estimation = await contract.callStatic.withdrawMoneyTo("0x0000000000000000000000000000000000000000");
+      //проверка состояния модификатора в withdrawMoneyTo
+
+      // const gasLimit = await provider.estimateGas({
+      //   to: contractAddress,
+      //   data: intrfc.encodeFunctionData("withdrawMoneyTo", [currentAccount]),
+      //   from: currentAccount,
+
+      //   //data: intrfc.encodeFunctionData("contribute"),
+      //   //value: ethers.utils.parseEther("0.001")
+      // });
+
+      // //console.log("Check transaction:", ethers.utils.formatUnits(gasLimit, 0));
+      // setMessages("OK! Gas amount: " + (ethers.utils.formatUnits(gasLimit, 0)*gasPrice));
+
+
+      //const estimation = await contract.callStatic.withdrawMoneyTo("0x0000000000000000000000000000000000000000");
+      //setMessages("");
+
 
       let gasPrice = await provider.getGasPrice()
-      let gasLimit = await contract.estimateGas.withdrawMoneyTo("0x0000000000000000000000000000000000000000");
-
-
+      let gasLimit = await contract.estimateGas.withdrawMoneyTo(currentAccount);
       let transactionFee = gasPrice * gasLimit;
 
-      setMessages("Gas amount: " + transactionFee);
-      console.log("Check transaction:", transactionFee);
+      setMessages("OK! Transaction fee: " + (gasPrice * gasLimit));
 
     } catch (error) {
       console.error(error);
+      //pull message from error: execution reverted: You are not the largest Contributor
+      const rx = error.message.match(/"message":"([^"]+)",/);
+      if (rx) setMessages(rx[1]);
     }
   };
 
@@ -175,7 +191,7 @@ const DataLayout = () => {
         abi.abi,
         provider.getSigner()
       );
-      await contract.withdrawMoneyTo(currentAccount);
+      const tx = await contract.withdrawMoneyTo(currentAccount);
 
       provider.once(tx.hash, (txc) => {
         setMessages("withdraw completed! blockNumber:" + txc.blockNumber);
@@ -373,7 +389,7 @@ const DataLayout = () => {
                 className="p-2 text-2xl"
                 onClick={tryWithdraw}
               >
-                ✔ Check gas amount
+                ✔ Check transaction
               </button>
               <button
                 className="p-2 text-4xl"
