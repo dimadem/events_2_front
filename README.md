@@ -1,5 +1,7 @@
 # This is task from [Ilya Krukowski](https://www.youtube.com/@IlyaBodrovKrukowski) from [Guide DAO School](https://www.guidedao.xyz/) 
 
+https://events-2-front.vercel.app/
+
 >make any contract:
 - who accepts money 
 - allows you to output them
