@@ -1,4 +1,4 @@
-# This is task from [Ilya Krukowski](https://www.youtube.com/@IlyaBodrovKrukowski) 
+# This is task from [Ilya Krukowski](https://www.youtube.com/@IlyaBodrovKrukowski) from [Guide DAO School](https://www.guidedao.xyz/) 
 
 >Ну, скажем, сделайте любой контракт, который хотя бы деньги принимает и позволяет выводить. И при нажатии "вывести" или "заплатить" на фронте появляется уведомление, что функция вызвана.
 
