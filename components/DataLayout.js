@@ -353,7 +353,7 @@ const DataLayout = () => {
               </button>
             </>
           ) : (
-            <p className="p-2 text-4xl">🪙 Withdraw money</p>
+            <p className="p-2 text-4xl">🏆 Withdraw money</p>
           )}
         </div>
 
