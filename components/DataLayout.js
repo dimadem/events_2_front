@@ -28,7 +28,6 @@ const DataLayout = () => {
     }
   }
 
-
   useEffect(() => {
     // Проверка наличия кошелька
     var hv = typeof window !== "undefined" && window?.ethereum; //! крутой прием
@@ -129,7 +128,7 @@ const DataLayout = () => {
         // подтверждение транзакции
         //const txc = await walletProvider.waitForTransaction(tx.hash)
         provider.once(tx.hash, (txc) => {
-          setMessages("tx completed! " + txc.blockNumber);
+          setMessages("contribute completed! blockNumber:" + txc.blockNumber);
         })
 
         setCntr("");
@@ -150,13 +149,36 @@ const DataLayout = () => {
         provider.getSigner()
       );
 
-      // const estimation = await contract.callStatic.withdrawMoneyTo(currentAccount);
+      //проверка состояния модификатора в withdrawMoneyTo
 
-      // setMessages("Check transaction " + estimation);
+      // const gasLimit = await provider.estimateGas({
+      //   to: contractAddress,
+      //   data: intrfc.encodeFunctionData("withdrawMoneyTo", [currentAccount]),
+      //   from: currentAccount,
+
+      //   //data: intrfc.encodeFunctionData("contribute"),
+      //   //value: ethers.utils.parseEther("0.001")
+      // });
+
+      // //console.log("Check transaction:", ethers.utils.formatUnits(gasLimit, 0));
+      // setMessages("OK! Gas amount: " + (ethers.utils.formatUnits(gasLimit, 0)*gasPrice));
+
+
+      //const estimation = await contract.callStatic.withdrawMoneyTo("0x0000000000000000000000000000000000000000");
+      //setMessages("");
+
+
+      let gasPrice = await provider.getGasPrice()
+      let gasLimit = await contract.estimateGas.withdrawMoneyTo(currentAccount);
+      let transactionFee = gasPrice * gasLimit;
+
+      setMessages("OK! Transaction fee: " + (gasPrice * gasLimit));
 
     } catch (error) {
-      console.error("hhhh", error);
-      //setMessages("OK Gas estimation "+ estimation);
+      console.error(error);
+      //pull message from error: execution reverted: You are not the largest Contributor
+      const rx = error.message.match(/"message":"([^"]+)",/);
+      if (rx) setMessages(rx[1]);
     }
   };
 
@@ -169,10 +191,10 @@ const DataLayout = () => {
         abi.abi,
         provider.getSigner()
       );
-      await contract.withdrawMoneyTo(provider.getSigner());
+      const tx = await contract.withdrawMoneyTo(currentAccount);
 
       provider.once(tx.hash, (txc) => {
-        setMessages("tx completed! " + txc.blockNumber);
+        setMessages("withdraw completed! blockNumber:" + txc.blockNumber);
       })
 
     } catch (error) {
@@ -187,20 +209,50 @@ const DataLayout = () => {
     if (!logsOptions)//если не выбран элемент списка
       return;
 
-    let topic = [intrfc.getEventTopic(logsOptions)];
+    // let topic = [intrfc.getEventTopic(logsOptions)];
 
-    //поиск по индексированному значению
-    if (logsOptions == "Contribute" && searchAddress)
-      topic[1] = ethers.utils.hexZeroPad(searchAddress, 32);
+    // //поиск по индексированному значению
+    // if (logsOptions == "Contribute" && searchAddress)
+    //   topic[1] = ethers.utils.hexZeroPad(searchAddress, 32);
 
-    const rawLogs = await provider.getLogs({
-      address: contractAddress,
-      //topics: [ethers.utils.id(logsOptions)],//Contribute(address,address,uint256)
-      topics: topic,
-      fromBlock: 0,
-      toBlock: "latest",
-    });
-    // console.log("rawLogs:", rawLogs);
+    // const rawLogs = await provider.getLogs({
+    //   address: contractAddress,
+    //   //topics: [ethers.utils.id(logsOptions)],//Contribute(address,address,uint256)
+    //   topics: topic,
+    //   fromBlock: 0,
+    //   toBlock: "latest",
+    // });
+
+
+    const contract = new ethers.Contract(
+      contractAddress,
+      abi.abi,
+      provider.getSigner()
+    );
+
+    let eventFilter;
+
+    switch (logsOptions) {
+      case 'Contribute':
+        eventFilter = contract.filters.Contribute();
+        //поиск по индексированному значению
+        if (searchAddress)
+          eventFilter = contract.filters.Contribute(searchAddress);
+        break;
+      case 'NewLargestContributor':
+        eventFilter = contract.filters.NewLargestContributor();
+        break;
+      case 'WithdrawMoney':  // if (x === 'value2')
+        eventFilter = contract.filters.WithdrawMoney();
+        break;
+
+      default:
+        return;
+    }
+
+    const rawLogs = await contract.queryFilter(eventFilter, 0, "latest");
+
+    //console.log("rawLogs:", rawLogs);
     setLogs([rawLogs, logsOptions]);
 
     // console.log(`Parsing events...`);
@@ -228,7 +280,7 @@ const DataLayout = () => {
   const TableData = () =>
     logs[0].map((log, id) => {
       const parsedLog = intrfc.parseLog(log);
-      console.log("parsedLog:", parsedLog.args);
+      //console.log("parsedLog:", parsedLog.args);
       return (
         <tr key={id}>
           <td key={id + 1} className="border border-slate-300">
@@ -245,7 +297,7 @@ const DataLayout = () => {
           )}
         </tr>
       );
-    });
+    }).reverse();
 
   // if (!haveWallet) return <p>no Wallet</p>;
 
@@ -347,7 +399,7 @@ const DataLayout = () => {
               </button>
             </>
           ) : (
-            <p className="p-2 text-4xl">🪙 Withdraw money</p>
+            <p className="p-2 text-4xl">🏆 Withdraw money</p>
           )}
         </div>
 
@@ -387,8 +439,6 @@ const DataLayout = () => {
             <p className="p-2 text-4xl">⚒ Get logs</p>
           )}
         </div>
-
-
       </div>
 
       {/* table */}

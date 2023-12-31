@@ -8,6 +8,8 @@ contract Events2front {
     uint public contributionDate;
     address public largestContributor;
 
+    //Значение indexed дублируется для строк и массивов! 
+    //добавить метку времени, так как в логах 
     event Contribute(address indexed contributorSearch, address contributor, uint contribution);
     event NewLargestContributor(address contributor, uint contribution);
     event WithdrawMoney(address contributor, uint balance);
